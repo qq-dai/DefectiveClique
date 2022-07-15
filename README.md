@@ -1,2 +1,2 @@
-# DefectiveClique
-The algorithms for enumerating all maximal s-defective cliques
+# Maximal Defective Clique Enumeration
+The source code and an anonymous version containing all proofs.
