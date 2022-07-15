@@ -19,7 +19,7 @@ For example:
 ```
 
 This executable accepts the following optional parameters when using 'branch':
-- "-a=": This is the executed algorithm, where "-a=1|2" for basic branching algorithm, "-a=3|4" for pivot-based branching algorithm enuemrating all maximal s-defective cliques, "-a=5|6" for pivot-based branching algorithm enuemrating relatively-large maximal s-defective cliques.
+- "-a=": This is the executed algorithm, where "-a=1|2" for basic branching algorithms, "-a=3|4" for pivot-based branching algorithms enuemrating all maximal s-defective cliques, "-a=5|6" for pivot-based branching algorithms enuemrating relatively-large maximal s-defective cliques.
 
 - "-k=": This is to set parameter 's'.
 
