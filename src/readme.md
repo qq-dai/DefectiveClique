@@ -4,7 +4,6 @@ This repository contains implementations of algorithms for maximal s-defective c
 # Compile
 
 ```
-cd src
 make
 ```
 
