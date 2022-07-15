@@ -1,0 +1,27 @@
+# Contents
+This repository contains implementations of algorithms for maximal s-defective clique enumeration.
+
+# Compile
+
+```
+cd src
+make
+```
+
+# Usage
+To execute the code, you need to run the following executable file:
+
+```
+./sdclique branch|delay [filepath] -a=[1,6] -k=[1,5] -q=[2,n]
+```
+For example:
+```
+./sdclique branch datas/ca-GrQc.txt -k=1 -a=6 -q=10
+```
+
+This executable accepts the following optional parameters when using 'branch':
+- "-a=": This is the executed algorithm, where "-a=1|2" for basic branching algorithm, "-a=3|4" for pivot-based branching algorithm enuemrating all maximal s-defective cliques, "-a=5|6" for pivot-based branching algorithm enuemrating relatively-large maximal s-defective cliques.
+
+- "-k=": This is to set parameter 's'.
+
+- "-q=": This is the constraint on the min-size of maximal s-defective cliques to be enumerated.
