@@ -11,7 +11,7 @@ make
 To execute the code, you need to run the following executable file:
 
 ```
-./sdclique branch|delay [filepath] -a=[1,6] -k=[1,5] -q=[2,n]
+./sdclique branch|delay [filepath] -a=[1,7] -k=[1,5] -q=[2,n]
 ```
 For example:
 ```
@@ -19,7 +19,7 @@ For example:
 ```
 
 This executable accepts the following optional parameters when using 'branch':
-- "-a=": This is the executed algorithm, where "-a=1|2" for basic branching algorithms, "-a=3|4" for pivot-based branching algorithms enuemrating all maximal s-defective cliques, "-a=5|6" for pivot-based branching algorithms enuemrating relatively-large maximal s-defective cliques.
+- "-a=": This is the executed algorithm, where "-a=1|2|3" for basic branching algorithms, "-a=4|5" for pivot-based branching algorithms enuemrating all maximal s-defective cliques, "-a=6|7" for pivot-based branching algorithms enuemrating relatively-large maximal s-defective cliques.
 
 - "-k=": This is to set parameter 's'.
 
