@@ -13,7 +13,10 @@ typedef unsigned long long ulong64;
 class PolyEnum : public Algorithm
 {
 private:
-    int32 k          = 1;
+    int32 k          = 2;
+    int32 minsize    = 2;
+    int32 alg        = 1;
+
     int32 MCliqueSize  = 0;
     ulong64 cliquenums = 0;
     ulong64 iterations = 0;
@@ -28,7 +31,7 @@ private:
     int32 maxcore = 0;
 
     clock_t global_time;
-    long limited_results = 0;
+    long limited_results = LONG_MAX;
     long cur_out_size = 0;
 public:
     PolyEnum(/* args */);
@@ -43,16 +46,24 @@ public:
     void setParameters(int argc, char *argv[]) {
         for (int i = 1; i < argc; ++i) {
             char *p = argv[i];
-            if (strstr(p, "-k=")) {
+            if (strstr(p, "-q=")) {
+                minsize = atoi(p+3);
+            }
+            else if (strstr(p, "-k=")) {
                 k = atoi(p+3);
+            }
+            else if (strstr(p, "-a=")) {
+                alg = atoi(p+3);
             }
             else if (strstr(p, "-r=")) {
                 limited_results = atoi(p+3);
                 assert(limited_results>0);
             } 
         }
+        printf("minsize=%d, k=%d, alg=%d\n", minsize, k, alg);
     }
 
+    //Polynomial delay algorithm 
     void polyRelabelVertices(int32 *nodeset);
     void polyEnum();
     int  polyGetPI(vector<int> &R, int rsize, int nonbrs);
@@ -63,7 +74,11 @@ public:
     void recursiveInc(vector<int> &R, int rsize, int nonbrs, vector<upair> &C, vector<upair> &X, vector<upair> &CR);
 
     upair polyExtendMax(vector<int> &R, int rsize, int nonbrs);
+    void polyInitRoot(int v, vector<int32> &R, vector<upair> &P, vector<bool> &visited);
     void polyGenerateAlSat(vector<int> &R, int rsize, int nonbrs, int v);
+    void GenerateSubset(vector<int> &P,  int psize, int nnbrP, vector<upair> &S, int deep);
+
     void recursiveReduc(vector<int> &R, int rsize, int nonbrs, vector<upair> &C, vector<upair> &X, vector<upair> &CR, int deep);
+    void reids();
 
 };

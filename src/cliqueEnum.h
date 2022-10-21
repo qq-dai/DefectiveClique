@@ -15,7 +15,7 @@ class CliqueEnum : public Algorithm
 private:
         int32 k          = 1;
         int32 minsize    = 2;
-        int32 alg        = 1;
+        int32 alg        = 5;
 
         int32 MCliqueSize  = 0;
         ulong64 cliquenums = 0;
@@ -32,7 +32,7 @@ private:
         vector<int> testC;
 
         clock_t global_time;
-        long limited_results;
+        long limited_results = LONG_MAX;
         long cur_out_size;
 
 public:
@@ -73,6 +73,7 @@ public:
     void basicEnum2d();
     void basicBranchN(vector<int> &R, int rsize, int nonbrs, vector<int> &C, int csize, vector<int> &X);
     void basicBranchW(vector<int> &R, int rsize, int nonbrs, vector<upair> &C, int csize, vector<upair> &X);
+    void basicCORBranch(vector<int> &R, int rsize, int nnbrs, vector<upair> &C, int csize, vector<upair> &X);
     // void updateSet(int v, int nonbrs, vector<upair> &C, int32 s, int32 t, vector<upair> &Res);
     void initHash();
 
@@ -91,6 +92,11 @@ public:
     void pivotBranch1(vector<int> &R, int rsize, int nonbrs, vector<upair> &C, int csize, vector<upair> &X);
     void pivotBranchUB(vector<int> &R, int rsize, int nonbrs, vector<upair> &C, int csize, vector<upair> &X, const int &mxsize);
     void twoHopNbrs(int v, vector<upair> &C,vector<upair> &X, vector<bool> &visited, vector<bool> &computed);
+
+    // Branch enumeration
+    void branchEnum();
+    void branchClique(vector<int> &R, int rsize, vector<int> &C, int psize, vector<int> &X);
+
     void subgraph(vector<upair> &C);
 
     int testCnt1 = 0;

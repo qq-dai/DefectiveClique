@@ -58,6 +58,15 @@ void Algorithm::read_graph(const char *str)
 			md = deg[i] > md ? deg[i] : md;
 		}
 		printf("n = %d, m = %d, maxdeg = %d\n", n, m, md);
+
+        // int32 testlen = 0;
+        // for (int32 i = 0, s = 0; i < V; ++i) {
+        //     for (int32 j = 0; j < deg[i]; ++j)
+        //     {
+        //         if (testlen++ > 10) break;
+        //         printf("%d\t%d\t%lf\n",i, adj[i][j].first, adj[i][j].second);
+        //     }
+        // }
     }
     else {
         FILE *in = fopen(str, "r");
@@ -123,7 +132,12 @@ void Algorithm::read_graph(const char *str)
                 printf("v=%d, j=%d, adj-1=%d, adj=%d\n",i,j,adj[i][j-1], v);
                 assert(adj[i][j-1] < v);
             }
+            // if (i < v) {
+            //     adj[i][tdeg[i]++] = adj[i][j];
+            //     adj[v][tdeg[v]++] = i;
+            // }
         }
+        //deg[i] = tdeg[i];
     }
 }
 
@@ -177,7 +191,7 @@ void Algorithm::scalability(bool randomv, float scal)
             md = max(md, tempdeg[i]);
         }
     }
-    printf("Scale=%.1f%%, sv=%d, n=%d, m=%d, maxdeg=%d\n", double(scal*100), randomv, n, m, md);
+    //printf("Scale=%.1f\%, sv=%d, n=%d, m=%d, maxdeg=%d\n", scal*100, randomv, n, m, md);
 }
 
 int Algorithm::core_decompsition(int32 *nodeset, int32 nodesize)
@@ -237,6 +251,11 @@ int32 Algorithm::coloring(int32 *nodeset, int32 nodesize)
 {
     int32 color_nums = 0, len = nodesize;
     vector<int32> bin(md+1), sequence(len);
+
+    //core_decompsition(nodeset, nodesize);
+    //for (int32 i = 0; i < len; ++i) sequence[i] = nodeset[i];
+    //len = topKEtaCoreDecompsition(nodeset); 
+    //for (int32 i = 0; i < len; ++i) sequence[i] = nodeset[i];
 
     for (int32 i = 0; i < len; ++i) bin[deg[nodeset[i]]]++;
     for (int32 i = 1; i <= md; ++i) bin[i] += bin[i-1];

@@ -19,13 +19,13 @@ void CliqueEnum::run() {
     printf("Run: Branch\n");
     global_time = clock();
     cur_out_size = 10;
-    if (alg == 1 ) basicEnum();
-    else if (alg == 2) basicEnum2d();
-    else if (alg == 3) pivotEnum();
-    else if (alg == 4) pivotOrderingEnum();
-    else if (alg == 5) enum2d();
-    else if (alg == 6) enum2dOrdering();
-    else printf("Error: alg=%d, should be in [1,6]\n", alg);
+    if (alg == 1 || alg == 2) basicEnum();
+    else if (alg == 3) basicEnum2d();
+    else if (alg == 4) pivotEnum();
+    else if (alg == 5) pivotOrderingEnum();
+    else if (alg == 6) enum2d();
+    else if (alg == 7) enum2dOrdering();
+    else printf("Error: alg=%d, should be in [1,7]\n", alg);
     printf("All time: %f sec\n", double(clock()-tm)/CLOCKS_PER_SEC);
 }
 // Basic branch
@@ -35,12 +35,31 @@ void CliqueEnum::basicEnum()
     initHash();
     R.resize(md+k);
     clock_t tm = clock();
-    vector<int> C, X;
-    C.reserve(n);
-    X.reserve(n);
-    for (int i = 0; i < n; ++i)
-        if (deg[i]>0) C.emplace_back(i);
-    basicBranchN(R,0,0,C,C.size(),X);
+    // if (alg == 1) {
+    //     vector<int> C, X;
+    //     C.reserve(n);
+    //     X.reserve(n);
+    //     for (int i = 0; i < n; ++i)
+    //         if (deg[i]>0) C.emplace_back(i);
+    //     basicBranchN(R,0,0,C,C.size(),X);
+    // }
+    // else 
+    if (alg == 1) {
+        vector<upair> C, X;
+        C.reserve(n);
+        X.reserve(n);
+        for (int i = 0; i < n; ++i)
+            if (deg[i]>0) C.emplace_back(i, 0);
+        basicBranchW(R,0,0,C,C.size(),X);
+    }
+    else if (alg == 2) {
+        vector<upair> C, X;
+        C.reserve(n);
+        X.reserve(n);
+        for (int i = 0; i < n; ++i)
+            if (deg[i]>0) C.emplace_back(i, 0);
+        basicCORBranch(R,0,0,C,C.size(),X);
+    }
     printf("Number of def-cliques: %lld \n", cliquenums);
     printf("Maximum def-clique size: %d \n", MCliqueSize);
     printf("Running time of Enum: %.3f s \n", double(clock()-tm) / CLOCKS_PER_SEC);
@@ -56,15 +75,24 @@ void CliqueEnum::basicEnum2d()
     X.reserve(n);
     visited.resize(n,false);
     clock_t tm = clock();
+
+    vector<upair> Cx, Xx;
+    Cx.reserve(n);
+    Xx.reserve(n);
     for (int i = 0; i < n; ++i) {
         if (deg[i] > 0) {
             C.clear(); X.clear();
+            Cx.clear(); Xx.clear();
             visited[i] = true;
             for (int j = 0; j < deg[i]; ++j) {
                 int u = adj[i][j];
                 visited[u] = true;
                 if (u > i) C.emplace_back(u);
                 else X.emplace_back(u);
+
+                if (u > i) Cx.emplace_back(u, 0);
+                else Xx.emplace_back(u, 0);
+
             }
             int csize = C.size();
             for (int j = 0; j < csize; ++j) {
@@ -75,6 +103,9 @@ void CliqueEnum::basicEnum2d()
                         if (w > i) C.emplace_back(w);
                         else X.emplace_back(w);
                         visited[w] = true;
+
+                        if (w > i) Cx.emplace_back(w,1);
+                        else Xx.emplace_back(w, 1);
                     }
                 }
             }
@@ -82,7 +113,10 @@ void CliqueEnum::basicEnum2d()
             visited[i] = false;
             for (auto u : C) visited[u] = false;
             for (auto u : X) visited[u] = false;
-            basicBranchN(R,1,0,C,C.size(),X);
+            // basicBranchN(R,1,0,C,C.size(),X);
+
+            basicCORBranch(R,1,0,Cx,Cx.size(),Xx);
+            if (cliquenums >= limited_results) break;
         }
     }
     printf("Number of def-cliques: %lld \n", cliquenums);
@@ -93,6 +127,7 @@ void CliqueEnum::basicEnum2d()
 void CliqueEnum::basicBranchN(vector<int> &R, int rsize, int nnbrs, vector<int> &C, int csize, vector<int> &X)
 {
     if (rsize+csize<minsize) return;
+    iterations++;
     if (csize <= 0) {
         if (X.empty() && rsize >= minsize) {
             cliquenums++;
@@ -146,12 +181,16 @@ void CliqueEnum::basicBranchN(vector<int> &R, int rsize, int nnbrs, vector<int> 
     }
     basicBranchN(R,rsize+1,_nnbrs,_C,_C.size(),_X);
     X.emplace_back(v); 
+    if (cliquenums >= limited_results) return;
+    //vector<int> ().swap(_C); vector<int> ().swap(_X);
     basicBranchN(R,rsize,nnbrs,C,csize-1,X);
+    if (cliquenums >= limited_results) return;
 }
 
 void CliqueEnum::basicBranchW(vector<int> &R, int rsize, int nnbrs, vector<upair> &C, int csize, vector<upair> &X)
 {
     if (rsize+csize<minsize) return;
+    iterations++;
     if (csize <= 0) {
         if (X.empty() && rsize >= minsize) {
             cliquenums++;
@@ -168,7 +207,9 @@ void CliqueEnum::basicBranchW(vector<int> &R, int rsize, int nnbrs, vector<upair
     assert(csize<=C.size());
     vector<upair> _C, _X;
     // //_C.reserve(csize);_X.reserve(csize+X.size());
-    auto v = C[csize-1];
+    auto v = C[0];
+    C[0] = C[csize-1];
+    C[csize-1] = v;
     _C.reserve(csize-1);
     _X.reserve(csize+X.size());
 
@@ -179,8 +220,140 @@ void CliqueEnum::basicBranchW(vector<int> &R, int rsize, int nnbrs, vector<upair
     R[rsize] = v.first;
     basicBranchW(R,rsize+1,_nnbrs,_C,_C.size(),_X);
     X.emplace_back(v); 
+    if (cliquenums >= limited_results) return;
     basicBranchW(R,rsize,nnbrs,C,csize-1,X);
+    if (cliquenums >= limited_results) return;
 }
+
+void CliqueEnum::basicCORBranch(vector<int> &R, int rsize, int nnbrs, vector<upair> &C, int csize, vector<upair> &X)
+{
+    if (rsize+csize<minsize) return;
+    iterations++;
+    if (csize <= 0) {
+        if (X.empty() && rsize >= minsize) {
+            cliquenums++;
+            MCliqueSize=max(MCliqueSize,rsize);
+        }
+        return;
+    }
+    if (rsize+csize<minsize) return;
+    assert(csize>0);
+    assert(csize<=C.size());
+    vector<upair> _C, _X;
+    // //_C.reserve(csize);_X.reserve(csize+X.size());
+    int pos = csize;
+    for (int i = 0; i < pos; ++i) {
+        auto u = C[i];
+        if (u.second == 0) {
+            pos--;
+            C[i] = C[pos];
+            C[pos] = u;
+            i--;
+        }
+    }
+    
+    if (pos+nnbrs > k) {
+        vector<upair> Co, Xo;
+        Co.resize(csize);
+        Xo.resize(X.size());
+        for (int32 i = 0; i < csize; ++i)
+            Co[i] = C[i];
+        for (int32 i = 0; i < X.size(); ++i)
+            Xo[i] = X[i];
+
+        int32 p = 0;
+        int32 _nnbrs = nnbrs;
+        int32 colen = csize;
+        int32 xolen = X.size();
+        while (p + nnbrs < k && colen > 0) {
+            auto v = Co[0];
+            assert(v.second > 0);
+            _nnbrs += v.second;
+            if (v.first != C[p].first) break;
+            if (_nnbrs > k || v.second == 0) break;
+
+            _C.clear(); _X.clear();
+            int32 olenn = 0;
+            for (int32 i = 0; i < colen; ++i) {
+                auto u = Co[i];
+                if (u.first != v.first && _nnbrs+u.second <= k) {
+                    if (!is_nbr(u.first, v.first)) u.second++;
+                    if (_nnbrs+u.second <= k) {
+                        Co[olenn++] = u;
+                        _C.emplace_back(u);
+                    }
+                }
+            }
+            colen = olenn;
+            olenn = 0;
+            for (int32 i = 0; i < xolen; ++i) {
+                auto u = Xo[i];
+                if (u.first != v.first && _nnbrs+u.second <= k) {
+                    if (!is_nbr(u.first, v.first)) u.second++;
+                    if (_nnbrs+u.second <= k) {
+                        Xo[olenn++] = u;
+                        _X.emplace_back(u);
+                    }
+                }
+            }
+            xolen = olenn;
+            olenn = 0;
+            
+            int32 _csize = _C.size();
+            if (colen > 0 && Co[0].second > 0 && Co[0].first == C[p+1].first){
+                _X.emplace_back(Co[0]);
+                _C[0] = _C[_csize-1];
+                _csize--;
+            }else colen = 0;
+            R[rsize + p] = v.first;
+            basicCORBranch(R,rsize+1+p,_nnbrs,_C,_csize,_X);
+            if (cliquenums >= limited_results) return;
+            p++;
+            // break;
+        }
+
+        auto v = C[0];
+        C[0] = C[csize-1];
+        C[csize-1] = v;
+
+        X.emplace_back(v); 
+        if (cliquenums >= limited_results) return;
+        if (rsize+csize<minsize) return;
+        basicCORBranch(R,rsize,nnbrs,C,csize-1,X);
+        if (cliquenums >= limited_results) return;
+        if (rsize+csize<minsize) return;
+    }
+    else {
+
+        auto v = C[csize-1];
+        int _nnbrs = nnbrs+v.second;
+        bool reduction = false;
+        _C.clear();
+        for (int32 i = 0; i < csize-1; ++i) {
+            auto u = C[i];
+            if (u.second + _nnbrs <= k) {
+                if (!is_nbr(v.first, u.first)) 
+                    u.second++;
+                if (u.second + _nnbrs <= k) {
+                    _C.emplace_back(u);
+                    if(u.second != 0) reduction = false;
+                }
+            }
+        }
+
+        updates(v.first,_nnbrs,X,0,X.size(),_X);
+        
+        R[rsize] = v.first;
+        basicCORBranch(R,rsize+1,_nnbrs,_C,_C.size(),_X);
+        X.emplace_back(v); 
+        if (cliquenums >= limited_results) return;
+        if (v.second == 0 && reduction) return;
+        if (rsize+csize<minsize+1) return;
+        basicCORBranch(R,rsize,nnbrs,C,csize-1,X);
+        if (cliquenums >= limited_results) return;
+    }
+}
+
 
 void CliqueEnum::initHash()
 {

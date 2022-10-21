@@ -18,10 +18,11 @@ PolyEnum::~PolyEnum()
 }
 
 void PolyEnum::run() {
+    reids();
     clock_t tm = clock();
-    printf("Run: polyEnum; k=%d\n", k);
+    printf("Run: polyEnum\n");
     polyEnum();
-    //printf("All time: %f sec\n", double(clock()-tm)/CLOCKS_PER_SEC);
+    printf("All time: %f sec\n", double(clock()-tm)/CLOCKS_PER_SEC);
 }
 
 void PolyEnum::updates(int32 v, int32 nonbrs, vector<upair> &C, int32 s, int32 t, vector<upair> &res)
@@ -69,13 +70,66 @@ inline bool PolyEnum::is_nbr(int32 u, int32 v) {
     return cuhash[u].find(v);
 }
 
-void PolyEnum::polyEnum()
+void PolyEnum::reids()
 {
     int32 *nodeset = new int32[n];
     for (int32 i = 0; i < n; ++i) nodeset[i] = i;
     maxcore = core_decompsition(nodeset, n);
-    polyRelabelVertices(nodeset);
 
+    vector<int> index(n);
+    maps.resize(n);
+    for (int i = 0, s = 0, ck = 0; i < n; ++i) {
+        if (core[i] <= ck) ;
+        else {
+            sort(nodeset+s, nodeset+i, [&](int v, int u){return deg[v] < deg[u];});
+            s = i;
+            ck = core[i];
+        }
+        if (i+1 == n) {
+            sort(nodeset+s, nodeset+n, [&](int v, int u){return deg[v] < deg[u];});
+        }
+    }
+    // sort(nodeset, nodeset+n, [&](int v, int u){return deg[v] < deg[u];});
+    for (int i = 0; i < n; ++i) {
+        int v = nodeset[i];
+        index[v] = i;
+        maps[i] = v;
+    }
+    if (redeg == NULL) redeg = new int32[n]();
+    if (readj == NULL) readj = new int32*[n];
+    if (recore == NULL) recore = new int32[n]();
+
+    for (int i = 0; i < n; ++i) {
+        int d  = deg[i];
+        for (int j = 0; j < d; ++j) {
+            int u = adj[i][j];
+            adj[i][j] = index[u];
+            // adj[i][j] = u;
+        }
+        sort(adj[i], adj[i]+d);
+    }
+
+    for (int i = 0; i < n; ++i) {
+        redeg[index[i]] = deg[i];
+        readj[index[i]] = adj[i];
+        // redeg[i] = deg[i];
+        // readj[i] = adj[i];
+    }
+   
+    cuhash.resize(n);
+    for (int i = 0; i < n; ++i) {
+        int d = redeg[i];
+        cuhash[i].reserve(d);
+        for (int j = 0; j < d; ++j) {
+            int u = readj[i][j];
+            cuhash[i].insert(u);
+        }
+    }
+    delete [] nodeset;
+}
+
+void PolyEnum::polyEnum()
+{
     clock_t tm = clock();
     int32 psize = 1;
     vector<bool> visited(n,false);
@@ -94,6 +148,7 @@ void PolyEnum::polyEnum()
         R[0] = i;
         upair r = polyExtendMax(R,1,0);
         polyRecursion(R, r.first, r.second, i);
+        // if (cliquenums >= limited_results) break;
     }
     printf("Number of def-cliques: %lld \n", cliquenums);
     printf("Maximum def-clique size: %d \n", MCliqueSize);
@@ -133,16 +188,18 @@ void PolyEnum::polyRecursion(vector<int> &R, int rsize, int nonbrs, int v)
     //     cur_out_size *= 10;
     //     printf("Results %d, time: %f sec \n", cliquenums, double(clock()-global_time) / CLOCKS_PER_SEC);
     // }
-    // if (cliquenums >= limited_results) return;
+    if (cliquenums >= limited_results) return;
     sort(R.begin(),R.begin()+rsize);
     //int pi =  polyGetPI(R, rsize, nonbrs);
     int pi = v;
+    //printf("pi=%d\n", pi);
     int pos = 0, nextu = pi;
     for (int i = 0; i < rsize; ++i) if (R[i] == pi) {pos = i+1; break;};
     for (int i = pi+1; i < n; ++i) {
         if (i > nextu && pos < rsize) {nextu = R[pos++]; i--; continue;}
         else if (redeg[i] == 0 || nextu == i) continue;
         polyGenerateAlSat(R, rsize, nonbrs, i);
+        if (cliquenums >= limited_results) return;
     }
 }
 
@@ -150,6 +207,7 @@ int PolyEnum::polyGetPI(vector<int> &R, int rsize, int nonbrs)
 {
     assert(rsize>0);
     if (rsize == 1) return R[0];
+    //sort(R.begin(), R.begin()+rsize);
     int lastv = R[rsize-1];
     int _nnbr, nextu, curu = R[0];
     int cu=1, pv=1, pi=curu, cnnbr = 0;
@@ -192,6 +250,69 @@ bool PolyEnum::checkAdd(vector<int> &R, int rsize, int nonbrs, int v, int &_nonb
         }
     }
     return true;
+}
+
+void PolyEnum::polyInitRoot(int32 v, vector<int32> &R, vector<upair> &P, vector<bool> &visited)
+{
+    P.clear();
+    visited[v] = true;
+    vector<vectori> temp(2);
+    int p = 0, q = 1;
+    bool it = true;
+    temp[0].reserve(fwdadj[v].size());
+    temp[1].reserve(fwdadj[v].size());
+    for (auto u : fwdadj[v]) {
+        visited[u] = true;
+        temp[0].emplace_back(u);
+    }
+    while (it) {
+        vector<int> &atemp = temp[p];
+        vector<int> &btemp = temp[q];
+        btemp.clear();
+        it = false;
+        for (auto u : atemp) {
+            int d = 0;
+            int maxc = 0, clnums = 0;
+            for (auto w : atemp) if (u != w && is_nbr(u,w)) d++;
+            if (d+k+2 >= minsize) btemp.emplace_back(u);
+        }
+        p = q; q = 1-p;
+        if (btemp.size() != atemp.size()) it = true;
+    }
+    for (auto u : temp[p]) P.emplace_back(u,0);
+    int len = P.size();
+    int32 d = redeg[v];
+    for (int i = 0; i < d; ++i) {
+        int u = readj[v][i];
+        if (recore[u]+k+1 >= minsize && !visited[u]){
+            int ud = 0;
+            for (auto w : temp[p]) if (is_nbr(u,w)) ud++;
+            if (ud+k+2 >= minsize) P.emplace_back(u, 0);
+        }
+        visited[u] = true;
+    }
+    temp[q].clear();
+    for (int32 i = 0; i < len && k > 0; ++i) {
+        int32 u = P[i].first;
+        int32 du = redeg[u];
+        for (int32 j = 0; j < du; ++j) {
+            int32 w = readj[u][j];
+            if (!visited[w] && recore[w]+k+1 >= minsize) {
+                visited[w] = true;
+                temp[q].emplace_back(w);
+                int xd = 0;
+                for (auto x : temp[p]) if (is_nbr(x,w)) xd++;
+                if (xd+k+1 < minsize) continue;
+                P.emplace_back(w, 1);
+                // else C.emplace_back(w,1);
+            }
+        }
+    }
+    for (auto u : temp[q]) visited[u] = false;
+    for (int i = 0; i < d; ++i) visited[readj[v][i]] = false;
+    visited[v] = false;
+    R[0] = v;
+    sort(P.begin(), P.end());
 }
 
 upair PolyEnum::polyExtendMax(vector<int> &R, int rsize, int nonbrs)
@@ -249,7 +370,7 @@ bool PolyEnum::pivot(int32 rsize, vector<upair> &C, vector<upair> &X, int &pivot
             if (cnt > maxd) {pivot = v; maxd = cnt;}
         }
     }
-    
+
     if (pivot == -1 ) return false;
     pivotSize = C.size();
     for (int32 i = 0; i < pivotSize; ++i) {
@@ -312,14 +433,19 @@ bool PolyEnum::validExtendMax(vector<int> &R, int rsize, int nonbrs, vector<int>
     }
     if (_rsize == 0) mir = 0;
     _nonbrs = nonbrs-nv;
+ 
+
     for (auto &u : CR) {
         if (inRi[u.first] == 0) inRi[u.first] = INCR;
         mxv = max(u.first,mxv);
     }
+   
     assert(_nonbrs >= 0);
     assert(_nonbrs <= k);
+    //_rsize = rsize-1; 
     int newnonbrs = 0;
     bool flag = true;
+    //printf("_nonbrs=%d, nv=%d\n",_nonbrs, nv);
     for (int i = 0; i <= mxv; ++i) {
         if (deg[i] == 0 || inRi[i] == INR) continue;
         if (_nonbrs == k) {
@@ -340,9 +466,10 @@ bool PolyEnum::validExtendMax(vector<int> &R, int rsize, int nonbrs, vector<int>
         else if (checkAdd(_R,_rsize,_nonbrs,i,newnonbrs)) {
             if (inRi[i] <= 0) {flag = false; break; }
             _nonbrs = newnonbrs;
-            _R[_rsize++] = i;
+            _R[_rsize++] = i; 
         }
     }
+   
     if (!flag) {
         for (int i = 0; i < rsize; ++i) inRi[R[i]] = 0;
         for (auto &u : CR) inRi[u.first] = 0;
@@ -375,6 +502,7 @@ bool PolyEnum::validExtendMax(vector<int> &R, int rsize, int nonbrs, vector<int>
         }
 
     }
+ 
     _nonbrs = nonbrs;
     for (int i = 0; i < rsize; ++i) inRi[R[i]] = 0;
     for (auto &u : CR) inRi[u.first] = 0;
@@ -423,6 +551,7 @@ void PolyEnum::recursiveInc(vector<int> &R, int rsize, int nonbrs, vector<upair>
         csize = ncsize;
         C.resize(csize); X.resize(xsize);
         recursiveReduc(R,rsize,nonbrs,C,X, CR, 0);
+        if (cliquenums >= limited_results) return;
     }
     else {
         int _nonbrs = 0;
@@ -444,6 +573,7 @@ void PolyEnum::recursiveInc(vector<int> &R, int rsize, int nonbrs, vector<upair>
             updates(u.first,_nonbrs,C,0,i,_X);
             R[rsize] = u.first;
             recursiveInc(R,rsize+1,_nonbrs,_C,_X, CR);
+            if (cliquenums >= limited_results) return;
         }
     }
 }
@@ -492,6 +622,7 @@ void PolyEnum::polyGenerateAlSat(vector<int> &R, int rsize, int nonbrs, int v)
         }
         _R[_rsize] = u.first;
         recursiveInc(_R,_rsize+1,_nonbrs,_C,_X, C);
+        if (cliquenums >= limited_results) return;
     }
     _nonbrs = 0; _rsize = 1;
     for (int i = ssize; i < rsize; ++i) {
@@ -517,10 +648,13 @@ void PolyEnum::polyGenerateAlSat(vector<int> &R, int rsize, int nonbrs, int v)
                 }
             }
         }
+ 
         if (_nonbrs+u.second<=k) return;
     }
+   
     vector<int> _Rn(maxcore+k+1);
-    if (validExtendMax(_R,_rsize,_nonbrs,_Rn,rsize,nonbrs,C)) {
+    if (validExtendMax(_R,_rsize,_nonbrs,_Rn,rsize,nonbrs,C)) {   
         polyRecursion(_Rn,rsize,nonbrs,v);
+        if (cliquenums >= limited_results) return;
     }
 }
