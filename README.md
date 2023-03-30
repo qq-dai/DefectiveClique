@@ -1,2 +1,2 @@
 # Maximal Defective Clique Enumeration
-The source code and an anonymous version containing all proofs.
+The source code and a full version containing all proofs.
